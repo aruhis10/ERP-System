@@ -1,91 +1,82 @@
 package edu.univ.erp.data;
 
 import edu.univ.erp.auth.PasswordUtil;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
+/**
+ * Initializes both authentication and ERP databases with base data.
+ * Run once via SeederRunner.main().
+ */
 public class InitialDataSeeder {
 
-    // Default passwords for sample accounts (to be hashed)
+    // Default passwords for sample accounts
     private static final String ADMIN_PASS = "adminpass";
-    private static final String INST_PASS = "instpass";
-    private static final String STU1_PASS = "stu1pass";
-    private static final String STU2_PASS = "stu2pass";
+    private static final String INST_PASS  = "instpass";
+    private static final String STU1_PASS  = "stu1pass";
+    private static final String STU2_PASS  = "stu2pass";
 
-    // Hashed passwords (pre-calculated for simplicity and consistency)
+    // Hashed passwords
     private static final String ADMIN_HASH = PasswordUtil.hashPassword(ADMIN_PASS);
-    private static final String INST_HASH = PasswordUtil.hashPassword(INST_PASS);
-    private static final String STU1_HASH = PasswordUtil.hashPassword(STU1_PASS);
-    private static final String STU2_HASH = PasswordUtil.hashPassword(STU2_PASS);
+    private static final String INST_HASH  = PasswordUtil.hashPassword(INST_PASS);
+    private static final String STU1_HASH  = PasswordUtil.hashPassword(STU1_PASS);
+    private static final String STU2_HASH  = PasswordUtil.hashPassword(STU2_PASS);
 
     public static void seed() {
-        // Unique IDs for linking the two DBs. We use explicit IDs for clear linking.
-        int adminId = 100; // Starting at a higher number for clarity
+        int adminId = 100;
         int inst1Id = 101;
-        int stu1Id = 201;
-        int stu2Id = 202;
+        int stu1Id  = 201;
+        int stu2Id  = 202;
 
         System.out.println("Starting data seeding...");
 
         try (Connection authConn = DatabaseManager.getAuthConnection();
-             Connection erpConn = DatabaseManager.getERPConnection()) {
+             Connection erpConn  = DatabaseManager.getERPConnection()) {
 
-            // Important: Enable transactions for safety
             authConn.setAutoCommit(false);
             erpConn.setAutoCommit(false);
 
-            // --- 1. Clear existing data for safe re-seeding ---
             clearTables(authConn, erpConn);
 
-            // --- 2. Auth DB Inserts ---
+            // AUTH DB
             insertAuthUser(authConn, adminId, "admin1", "Admin", ADMIN_HASH);
             insertAuthUser(authConn, inst1Id, "inst1", "Instructor", INST_HASH);
-            insertAuthUser(authConn, stu1Id, "stu1", "Student", STU1_HASH);
-            insertAuthUser(authConn, stu2Id, "stu2", "Student", STU2_HASH);
+            insertAuthUser(authConn, stu1Id,  "stu1",  "Student",   STU1_HASH);
+            insertAuthUser(authConn, stu2Id,  "stu2",  "Student",   STU2_HASH);
             authConn.commit();
 
-            // --- 3. ERP DB Inserts ---
-            // Instructors
+            // ERP DB
             insertInstructorProfile(erpConn, inst1Id, "Computer Science");
-
-            // Students
             insertStudentProfile(erpConn, stu1Id, "2024CS001", "B.Tech CS", 1);
             insertStudentProfile(erpConn, stu2Id, "2024IT002", "B.Tech IT", 1);
 
-            // Courses
             int cs101 = insertCourse(erpConn, "CS101", "Intro to Programming", 4);
             int ma203 = insertCourse(erpConn, "MA203", "Discrete Math", 3);
 
-            // Sections (inst1 teaches CS101)
             int sec1 = insertSection(erpConn, cs101, inst1Id, "Mon/Wed 10:00-11:30", "LH-101", 30, "Fall", 2024);
-            int sec2 = insertSection(erpConn, ma203, null, "Tue/Thu 14:00-15:30", "LH-205", 40, "Fall", 2024);
+            int sec2 = insertSection(erpConn, ma203, null,    "Tue/Thu 14:00-15:30", "LH-205", 40, "Fall", 2024);
 
-            // Enrollments (Returns the AUTO_INCREMENT ID)
-            int enrollment1 = insertEnrollment(erpConn, stu1Id, sec1, "REGISTERED"); // Stu1 registers CS101
-            int enrollment2 = insertEnrollment(erpConn, stu2Id, sec1, "REGISTERED"); // Stu2 registers CS101
-            insertEnrollment(erpConn, stu1Id, sec2, "REGISTERED"); // Stu1 registers MA203
+            int enrollment1 = insertEnrollment(erpConn, stu1Id, sec1, "REGISTERED");
+            int enrollment2 = insertEnrollment(erpConn, stu2Id, sec1, "REGISTERED");
+            insertEnrollment(erpConn, stu1Id, sec2, "REGISTERED");
 
-            // Grades (Partial grades for CS101 for stu1)
             insertGrade(erpConn, enrollment1, "Quiz 1", 18.0);
             insertGrade(erpConn, enrollment1, "Midterm", 85.5);
 
             erpConn.commit();
 
-            System.out.println("✅ Initial data seeding successful! Accounts are ready to use.");
-            System.out.println("   Admin: admin1 / adminpass | Instructor: inst1 / instpass");
-            System.out.println("   Student 1: stu1 / stu1pass | Student 2: stu2 / stu2pass");
+            System.out.println("Initial data seeding successful!");
+            System.out.println(" Admin: admin1 / adminpass");
+            System.out.println(" Instructor: inst1 / instpass");
+            System.out.println(" Student 1: stu1 / stu1pass");
+            System.out.println(" Student 2: stu2 / stu2pass");
 
         } catch (SQLException e) {
-            System.err.println("❌ Database seeding failed! Check DatabaseManager password and server status.");
+            System.err.println("Database seeding failed! Check connection, schema, or data integrity.");
             e.printStackTrace();
         }
     }
 
     private static void clearTables(Connection authConn, Connection erpConn) throws SQLException {
-        // Clearing ERP tables (reverse dependency order)
         try (Statement st = erpConn.createStatement()) {
             st.executeUpdate("DELETE FROM grades");
             st.executeUpdate("DELETE FROM enrollments");
@@ -96,11 +87,8 @@ public class InitialDataSeeder {
             st.executeUpdate("UPDATE settings SET setting_value = 'false' WHERE setting_key = 'maintenance_on'");
             erpConn.commit();
         }
-
-        // Clearing Auth table
         try (Statement st = authConn.createStatement()) {
             st.executeUpdate("DELETE FROM users_auth");
-            // Optional: Reset AUTO_INCREMENT (specific to MySQL)
             st.executeUpdate("ALTER TABLE users_auth AUTO_INCREMENT = 1");
             authConn.commit();
         }
@@ -144,37 +132,28 @@ public class InitialDataSeeder {
             ps.setString(2, title);
             ps.setInt(3, credits);
             ps.executeUpdate();
-
             try (ResultSet rs = ps.getGeneratedKeys()) {
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
+                if (rs.next()) return rs.getInt(1);
             }
         }
         throw new SQLException("Failed to retrieve course ID.");
     }
 
-    private static int insertSection(Connection conn, int courseId, Integer instructorId, String dayTime, String room, int capacity, String semester, int year) throws SQLException {
+    private static int insertSection(Connection conn, int courseId, Integer instructorId, String dayTime,
+                                     String room, int capacity, String semester, int year) throws SQLException {
         String sql = "INSERT INTO sections (course_id, instructor_id, day_time, room, capacity, semester, year) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, courseId);
-            // Use setInt for instructorId, handling null if needed
-            if (instructorId != null) {
-                ps.setInt(2, instructorId);
-            } else {
-                ps.setNull(2, java.sql.Types.INTEGER);
-            }
+            if (instructorId != null) ps.setInt(2, instructorId);
+            else ps.setNull(2, Types.INTEGER);
             ps.setString(3, dayTime);
             ps.setString(4, room);
             ps.setInt(5, capacity);
             ps.setString(6, semester);
             ps.setInt(7, year);
             ps.executeUpdate();
-
             try (ResultSet rs = ps.getGeneratedKeys()) {
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
+                if (rs.next()) return rs.getInt(1);
             }
         }
         throw new SQLException("Failed to retrieve section ID.");
@@ -187,11 +166,8 @@ public class InitialDataSeeder {
             ps.setInt(2, sectionId);
             ps.setString(3, status);
             ps.executeUpdate();
-
             try (ResultSet rs = ps.getGeneratedKeys()) {
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
+                if (rs.next()) return rs.getInt(1);
             }
         }
         throw new SQLException("Failed to retrieve enrollment ID.");
