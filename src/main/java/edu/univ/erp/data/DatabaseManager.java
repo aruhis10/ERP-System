@@ -9,7 +9,7 @@ public class DatabaseManager {
     // CRITICAL: Replace 'YOUR_ROOT_PASSWORD_HERE' with your actual MySQL root password.
     // The driver is now set to 'mariadb' to match the dependency in pom.xml.
     private static final String DB_USER = "erp_admin";
-    private static final String DB_PASSWORD = "erp@123";
+    private static final String DB_PASSWORD = "ERP@IIITD1234!";
 
 
     private static final HikariDataSource AUTH_DATA_SOURCE;
@@ -19,7 +19,8 @@ public class DatabaseManager {
         try {
             // --- 1. AUTH DB Configuration ---
             HikariConfig authConfig = new HikariConfig();
-            authConfig.setJdbcUrl("jdbc:mariadb://localhost:3306/erp_db?allowPublicKeyRetrieval=true&useSSL=false");
+//            authConfig.setJdbcUrl("jdbc:mariadb://localhost:3306/erp_db?allowPublicKeyRetrieval=true&useSSL=false");
+            authConfig.setJdbcUrl("jdbc:mariadb://localhost:3306/university_auth_db?allowPublicKeyRetrieval=true&useSSL=false");
             authConfig.setUsername(DB_USER);
             authConfig.setPassword(DB_PASSWORD);
             authConfig.setMaximumPoolSize(5);
@@ -27,7 +28,8 @@ public class DatabaseManager {
 
             // --- 2. ERP DB Configuration ---
             HikariConfig erpConfig = new HikariConfig();
-            erpConfig.setJdbcUrl("jdbc:mariadb://localhost:3306/erp_db?allowPublicKeyRetrieval=true&useSSL=false");
+//            erpConfig.setJdbcUrl("jdbc:mariadb://localhost:3306/erp_db?allowPublicKeyRetrieval=true&useSSL=false");
+            erpConfig.setJdbcUrl("jdbc:mariadb://localhost:3306/university_erp_db?allowPublicKeyRetrieval=true&useSSL=false");
             erpConfig.setUsername(DB_USER);
             erpConfig.setPassword(DB_PASSWORD);
             erpConfig.setMaximumPoolSize(10);
